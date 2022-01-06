@@ -13,6 +13,7 @@ import numpy as np
 from argparse import ArgumentParser
 
 import random, tqdm, sys, math, gzip
+import os
 
 import wandb
 
@@ -37,20 +38,16 @@ def sample(lnprobs, temperature=1.0):
 
     return cd.sample()
 
-def enwik8(path, n_train=int(50e6), n_valid=int(5e6), n_test=int(5e6)):
-    """
-    Load the enwik8 dataset from the Hutter challenge.
-
-    Adapted from https://github.com/openai/blocksparse/blob/master/examples/transformer/enwik8.py
-    :param path:
-    :param n_train:
-    :param n_valid:
-    :param n_test:
-    :return:
-    """
+def divide_dataset(path, max_size=10e8):
+    data_size = min(os.path.getsize(path), max_size)
+    training_size = int(0.9 * data_size)
+    validation_size = int(0.05 * data_size)
+    test_size = int(0.05 * data_size)
+    assert training_size + validation_size + test_size == data_size
     with gzip.open(path) if path.endswith('.gz') else open(path) as file:
-        X = np.fromstring(file.read(n_train + n_valid + n_test), dtype=np.uint8)
-        trX, vaX, teX = np.split(X, [n_train, n_train + n_valid])
+        X = np.fromstring(file.read(training_size + validation_size + test_size), dtype=np.uint8)
+        print(len(X))
+        trX, vaX, teX = np.split(X, [training_size, training_size + validation_size])
         return torch.from_numpy(trX), torch.from_numpy(vaX), torch.from_numpy(teX)
 
 def sample_batch(data, length, batch_size):
@@ -124,6 +121,8 @@ def sample_sequence(model, seed, max_context, length=600, temperature=0.5, verbo
     return seed
 
 def go(arg):
+    print("Let's go!")
+
     wandb.init(project="gpt-baby", config={
         "num-batches": arg.num_batches,
         "batch-size": arg.batch_size,
@@ -141,10 +140,11 @@ def go(arg):
     # load the data (validation unless arg.final is true, then test)
     arg.data = here('data/enwik8.gz') if arg.data is None else arg.data
 
-    data_train, data_val, data_test = enwik8(arg.data)
+    data_train, data_val, data_test = divide_dataset(arg.data)
     data_train, data_test = (torch.cat([data_train, data_val], dim=0), data_test) \
                             if arg.final else (data_train, data_val)
 
+    device = None
     if torch.cuda.is_available():
         device = torch.device(f'cuda:{arg.device_index}')
 
