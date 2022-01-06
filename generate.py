@@ -147,7 +147,7 @@ def go(arg):
     }
 
     if torch.cuda.is_available():
-        device = torch.device(f'cuda{arg.device_index}')
+        device = torch.device(f'cuda:{arg.device_index}')
 
     # create the model
     model = GTransformer(emb=arg.embedding_size, heads=arg.num_heads, depth=arg.depth, seq_length=arg.context, num_tokens=NUM_TOKENS, attention_type=arg.attention_type)
