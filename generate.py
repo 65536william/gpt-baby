@@ -146,12 +146,12 @@ def go(arg):
         "num-attention-heads": arg.num_heads
     }
 
-    torch.cuda.set_device(arg.device_index)
+    device = torch.device(f'cuda:${arg.device_index}')
 
     # create the model
     model = GTransformer(emb=arg.embedding_size, heads=arg.num_heads, depth=arg.depth, seq_length=arg.context, num_tokens=NUM_TOKENS, attention_type=arg.attention_type)
     if torch.cuda.is_available():
-        model.cuda()
+        model.to(device=device)
 
     opt = torch.optim.Adam(lr=arg.lr, params=model.parameters())
 
@@ -171,7 +171,7 @@ def go(arg):
         instances_seen += source.size(0)
 
         if torch.cuda.is_available():
-            source, target = source.cuda(), target.cuda()
+            source, target = source.to(device=device), target.to(device=device)
 
         tic()
         output = model(source) # forward pass
@@ -204,7 +204,7 @@ def go(arg):
                 seed = data_test[seedfr:seedfr + arg.context].to(torch.long)
 
                 if torch.cuda.is_available():
-                    seed = seed.cuda()
+                    seed = seed.to(device=device)
 
                 sample_sequence(model, seed=seed, max_context=arg.context, verbose=True, length=arg.sample_length)
 
