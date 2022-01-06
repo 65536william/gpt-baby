@@ -15,7 +15,6 @@ from argparse import ArgumentParser
 import random, tqdm, sys, math, gzip
 
 import wandb
-wandb.init(project="gpt-baby")
 
 # NB, the enwik8 data contains tokens from 9 to 240, but well round up to the nearest
 # power of two.
@@ -125,6 +124,13 @@ def sample_sequence(model, seed, max_context, length=600, temperature=0.5, verbo
     return seed
 
 def go(arg):
+    wandb.init(project="gpt-baby", config={
+        "num-batches": arg.num_batches,
+        "batch-size": arg.batch_size,
+        "embedding-size": arg.embedding_size,
+        "num-attention-heads": arg.num_heads
+    })
+
 
     if arg.seed < 0:
         seed = random.randint(0, 1000000)
@@ -138,13 +144,6 @@ def go(arg):
     data_train, data_val, data_test = enwik8(arg.data)
     data_train, data_test = (torch.cat([data_train, data_val], dim=0), data_test) \
                             if arg.final else (data_train, data_val)
-
-    wandb.config = {
-        "num-batches": arg.num_batches,
-        "batch-size": arg.batch_size,
-        "embedding-size": arg.embedding_size,
-        "num-attention-heads": arg.num_heads
-    }
 
     if torch.cuda.is_available():
         device = torch.device(f'cuda:{arg.device_index}')
