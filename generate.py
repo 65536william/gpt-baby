@@ -1,4 +1,3 @@
-import former
 from former import util, GTransformer
 
 from former.util import d, here, tic, toc
@@ -12,9 +11,11 @@ import torch.distributions as dist
 import numpy as np
 
 from argparse import ArgumentParser
-from torch.utils.tensorboard import SummaryWriter
 
 import random, tqdm, sys, math, gzip
+
+import wandb
+wandb.init(project="gpt-baby")
 
 # NB, the enwik8 data contains tokens from 9 to 240, but well round up to the nearest
 # power of two.
@@ -131,8 +132,6 @@ def go(arg):
     else:
         torch.manual_seed(arg.seed)
 
-    tbw = SummaryWriter(log_dir=arg.tb_dir) # Tensorboard logging
-
     # load the data (validation unless arg.final is true, then test)
     arg.data = here('data/enwik8.gz') if arg.data is None else arg.data
 
@@ -171,9 +170,7 @@ def go(arg):
 
         # Compute the loss
         loss = F.nll_loss(output.transpose(2, 1), target, reduction='mean')
-
-        tbw.add_scalar('transformer/train-loss', float(loss.item()) * util.LOG2E, i * arg.batch_size, instances_seen)
-        tbw.add_scalar('transformer/time-forward', t, instances_seen)
+        wandb.log({"loss": float(loss.item()) * util.LOG2E})
 
         loss.backward() # backward pass
 
@@ -212,8 +209,8 @@ def go(arg):
                 #    training.
 
                 print(f'epoch{i}: {bits_per_byte:.4} bits per byte')
-                tbw.add_scalar(f'transformer/eval-loss', bits_per_byte, i * arg.batch_size, instances_seen)
                 # -- 0.9 bit per byte is around the state of the art.
+                wandb.log({"eval-loss": bits_per_byte})
 
 if __name__ == "__main__":
 
