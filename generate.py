@@ -139,6 +139,15 @@ def go(arg):
     data_train, data_test = (torch.cat([data_train, data_val], dim=0), data_test) \
                             if arg.final else (data_train, data_val)
 
+    wandb.config = {
+        "num-batches": arg.num_batches,
+        "batch-size": arg.batch_size,
+        "embedding-size": arg.embedding_size,
+        "num-attention-heads": arg.num_heads
+    }
+
+    torch.cuda.set_device(arg.device_index)
+
     # create the model
     model = GTransformer(emb=arg.embedding_size, heads=arg.num_heads, depth=arg.depth, seq_length=arg.context, num_tokens=NUM_TOKENS, attention_type=arg.attention_type)
     if torch.cuda.is_available():
@@ -237,10 +246,6 @@ if __name__ == "__main__":
                         help="Learning rate",
                         default=0.0001, type=float)
 
-    parser.add_argument("-T", "--tb-dir", dest="tb_dir",
-                        help="Tensorboard logging directory",
-                        default='./runs')
-
     parser.add_argument("-f", "--final", dest="final",
                         help="Whether to run on the real test set (if not included, the validation set is used).",
                         action="store_true")
@@ -299,6 +304,8 @@ if __name__ == "__main__":
     parser.add_argument("--attention-type", dest="attention_type",
                         help="Which type of self-attention to use (default, gpt2, wide, narrow, relative)",
                         default="default", type=str)
+
+    parser.add_argument("--device-index", dest="device_index", help="Index of the target GPU", default=0, type=int)
 
     options = parser.parse_args()
 
